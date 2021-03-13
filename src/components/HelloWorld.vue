@@ -1,101 +1,53 @@
 <template>
   <v-container>
-    <v-row class="text-center">
-      <v-col cols="12">
-        <v-img
-          :src="require('../assets/logo.svg')"
-          class="my-3"
-          contain
-          height="200"
-        />
+    <v-row>
+      <v-col class="col-12"><h2>Прогноз на марку нефти Brent</h2></v-col>      
+    </v-row>
+    <v-row>
+      <v-col class="col-3 row-3">
+        <money-rate/>
       </v-col>
-
-      <v-col class="mb-4">
-        <h1 class="display-2 font-weight-bold mb-3">
-          Welcome to Vuetify
-        </h1>
-
-        <p class="subheading font-weight-regular">
-          For help and collaboration with other Vuetify developers,
-          <br>please join our online
-          <a
-            href="https://community.vuetifyjs.com"
-            target="_blank"
-          >Discord Community</a>
-        </p>
+      <v-col class="col-6">
+        <div class="small">
+          <line-chart :chart-data="datacollection" :options="chartOptions"></line-chart>
+        </div>
+        <div v-if="rates">
+          <div id="USD">Доллар США $ — {{getDollar}} руб.</div>
+          <div id="EUR">Евро € — {{getEuro}} руб.</div>
+        </div>
       </v-col>
+      <v-col class="col-3 align-content-space-around">
+        <h3>Новости</h3>
+        <v-card outlined>
+          <news-loader/>
+          <news-loader/>
+          <news-loader/>
 
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          What's next?
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(next, i) in whatsNext"
-            :key="i"
-            :href="next.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ next.text }}
-          </a>
-        </v-row>
-      </v-col>
-
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          Important Links
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(link, i) in importantLinks"
-            :key="i"
-            :href="link.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ link.text }}
-          </a>
-        </v-row>
-      </v-col>
-
-      <v-col
-        class="mb-5"
-        cols="12"
-      >
-        <h2 class="headline font-weight-bold mb-3">
-          Ecosystem
-        </h2>
-
-        <v-row justify="center">
-          <a
-            v-for="(eco, i) in ecosystem"
-            :key="i"
-            :href="eco.href"
-            class="subheading mx-3"
-            target="_blank"
-          >
-            {{ eco.text }}
-          </a>
-        </v-row>
+        </v-card>
       </v-col>
     </v-row>
+    
   </v-container>
 </template>
 
 <script>
+
+  import LineChart from '@/components/LineChart.js'
+  import MoneyRate from '@/components/MoneyRate.vue'
+  import NewsLoader from '@/components/NewsLoader.vue'
+
   export default {
     name: 'HelloWorld',
 
+    components: {
+      LineChart,
+      MoneyRate,
+      NewsLoader
+    },
+
     data: () => ({
+      chartOptions: null,
+      datacollection: null,
       ecosystem: [
         {
           text: 'vuetify-loader',
@@ -146,6 +98,115 @@
           href: 'https://vuetifyjs.com/getting-started/frequently-asked-questions',
         },
       ],
+      rates: null,
     }),
+    mounted () {
+      this.$on('getrates', (rates) => {
+        this.rates = rates;
+      })
+      this.fillData()
+      setInterval(() => {
+        this.moveData()
+      },2000)
+    },
+    computed: {
+    getDollar() {
+       return this.rates.Valute.USD.Value.toFixed(4).replace('.', ',');
+    },
+    getEuro() {
+      return this.rates.Valute.EUR.Value.toFixed(4).replace('.', ',');
+    }
+  },
+    methods: {
+      fillData () {
+        
+        this.chartOptions = {
+          responsive: true,
+          scales: {
+            yAxes: [{
+              ticks: {
+                // the data minimum used for determining the ticks is Math.min(dataMin, suggestedMin)
+                suggestedMin: 10,
+
+                // the data maximum used for determining the ticks is Math.max(dataMax, suggestedMax)
+                suggestedMax: 50
+              }
+            }]
+          },
+          animation: {
+              duration: 0
+            
+          }
+        //   legend: {
+        //     display: true,
+        //     labels: {
+        //         fontColor: 'rgb(255, 99, 132)'
+        //     }
+        // }
+        }
+
+        this.datacollection = {
+          labels: this.fillArray(),
+          datasets: [
+            {
+              label: 'Brent',
+              backgroundColor: 'green',
+              fill: false,
+              borderColor: 'rgb(75, 192, 192)',
+              data: this.fillArray(),
+              pointRadius: 1,
+            }
+          ]
+        }
+      },
+      getRandomInt () {
+        return Math.floor(Math.random() * (30 - 5 + 1)) + 11
+      },
+      fillArray(){
+        let data = []
+        for (let i = 0; i<=25; i++){
+          data.push(this.getRandomInt())
+        }
+        return data
+      },
+      moveData(){
+        const dataPoint = this.getRandomInt()
+
+        const len = this.datacollection.datasets[0].data.length
+        for (let i=0; i<len-1; i++){
+          this.datacollection.datasets[0].data[i] = this.datacollection.datasets[0].data[i+1]
+        }
+        this.datacollection.datasets[0].data.push(dataPoint) 
+        // const lablePoint = this.getRandomInt()
+
+        // this.datacollection.labels.push(lablePoint)
+        // this.datacollection.datasets[0].data.push(dataPoint)
+
+        // this.datacollection.labels.shift()
+        // this.datacollection.datasets[0].data.shift()
+
+        this.datacollection = {
+          labels: this.datacollection.labels,
+          datasets: [
+            {
+              label: 'Brent',
+              backgroundColor: 'green',
+              fill: false,
+              borderColor: 'rgb(75, 192, 192)',
+              data: this.datacollection.datasets[0].data,
+              pointRadius: 1,
+            }
+          ]
+        }
+      }
+    }
   }
+
 </script>
+
+<style scoped>
+  .small {
+    /* max-width: 500px;
+    max-height: 500px; */
+  }
+</style>
